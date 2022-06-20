@@ -48,7 +48,7 @@ while True:
             print( f"The room has the following object(s): {', '.join( list( state[ 'room' ][ 'objects' ].keys() ) )}." )
             continue
         
-        ## if we can't find the object or recognize it, then we pretend the room is the object
+        ## if we can't find the object or recognize it, then we assume the room is the object
         try:
             state[ 'object' ] = game[ 'game' ][ 'rooms' ][ INIT_ROOM ][ 'objects' ][ command[ 'object' ] ]
         except KeyError as e:
@@ -68,7 +68,7 @@ while True:
                   
         if DEBUG > 0:
             print( f'''
-                object: {command[ 'object' ] }
+                object: {command[ 'object' ]}
                 verb: {command[ 'verb' ]}
             ''' )
             
