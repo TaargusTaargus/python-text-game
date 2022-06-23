@@ -14,7 +14,7 @@ class Event:
     def __init__( self, text ):
         self.text = text
 
-    def fire( self, context ):
+    def fire( self, state, game ):
         raise Exception( "FIRE NOT IMPLEMENTED FOR THIS EVENT." )
 
 
@@ -23,7 +23,7 @@ class TextEvent:
     def __init__( self, text ):
         self.text = text
 
-    def fire( self, context ):
+    def fire( self, state, game ):
         return self.text
 
 class PortalEvent:
@@ -32,31 +32,43 @@ class PortalEvent:
         self.text = text
         self.nroom = nroom
 
-    def fire( self, context ):
-        context.room = self.nroom
+    def fire( self, state, game ):
+        state[ 'room' ] = game[ "rooms" ][ self.nroom ]
         return self.text
 
 
 EVENT_FACTORY = {
-    "(\s?portal\s?.*)" : lambda args: PortalEvent( *args ),
-    "": lambda args: TextEvent( *args )
+    "portal": PortalEvent,
+    "default": TextEvent
 }
 
-def interpret_event( key ):
+def interpret_event( key, description ):
 
-    #for event in EVENT_FACTORY.keys():
-        
-        #if search
-    pattern = re.compile( "\((.*)\)" )
+    pattern = re.compile( "(\(.*\))" )
     args = pattern.search( key )
+    event = None
+    name = None
 
     if args:
         args = args.group( 0 ).strip()
         name = key[ 0 : key.find( args ) ].strip()
+        args = args.replace( "(", "" ).replace( ")", "" )
     else:
         name = key.strip()
-        
-    print( f"{name}\n{args}" )
+
+    if args:
+        args = args.split( "," )
+        event, args = args[ 0 ], [ description ] + args[ 1: ]
+    else:
+        args = [ description ]
+
+    if event and event in EVENT_FACTORY:
+        event = EVENT_FACTORY[ event ]( *args )
+    else:
+        event = EVENT_FACTORY[ "default" ]( *args )
+
+    return name, event
+
 
 
 def standard_format_parser_room( room_name, text ):
@@ -75,13 +87,14 @@ def standard_format_parser_room( room_name, text ):
         subfragments = fragments[ i + 1 ].split( STANDARD_FORMAT_EVENT_DELIMITER )
         description = subfragments[ 0 ].strip()
         
-        events = { DESCRIPTION_KEYWORD : description }
+        events = { DESCRIPTION_KEYWORD : TextEvent( description ) }
         room[ OBJECTS_KEYWORD ][ name ] = {}
 
         if len( subfragments ) > 1:
             for j in range( 1, len( subfragments ), 2 ):
-                interpret_event( subfragments[ j ].strip() )
-                events[ subfragments[ j ].strip() ] = subfragments[ j + 1 ].strip()
+                n, e = interpret_event( subfragments[ j ].strip(), subfragments[ j + 1 ].strip() )
+                events[ n ] = e
+
 
         if name == room_name:
             room[ EVENTS_KEYWORD ] = events
@@ -89,6 +102,7 @@ def standard_format_parser_room( room_name, text ):
             room[ OBJECTS_KEYWORD ][ name ][ EVENTS_KEYWORD ] = events
 
     return room
+
         
 
 def standard_format_parser( folder ):

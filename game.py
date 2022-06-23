@@ -18,11 +18,14 @@ state = {
     'room': None
 }
 
-game = { 
+root = { 
     'config' : None,
     'game' : standard_format_parser( argv[ 1 ] ),
     'state': state
 }
+
+
+state[ 'room' ] = root[ 'game' ][ 'rooms' ][ INIT_ROOM ]
 
 while True:
    
@@ -41,7 +44,7 @@ while True:
         }
         
         state[ 'command' ] = command
-        state[ 'room' ] = game[ 'game' ][ 'rooms' ][ INIT_ROOM ]
+
         
         ## check for special object command
         if command[ 'verb' ] == VIEW_ROOM_OBJECTS_VERB:
@@ -50,7 +53,7 @@ while True:
         
         ## if we can't find the object or recognize it, then we assume the room is the object
         try:
-            state[ 'object' ] = game[ 'game' ][ 'rooms' ][ INIT_ROOM ][ 'objects' ][ command[ 'object' ] ]
+            state[ 'object' ] = state[ 'room' ][ 'objects' ][ command[ 'object' ] ]
         except KeyError as e:
             state[ 'object' ] = state[ 'room' ]
    
@@ -61,9 +64,13 @@ while True:
                   
         ## now we try to trigger the event
         try:
-            print( state[ 'object' ][ 'events' ][ command[ 'verb' ] ] )
+            print( state[ 'object' ][ 'events' ][ command[ 'verb' ] ].fire( state, root[ 'game' ] ) )
         except KeyError as e:
-            print( f"You can't do that to the {state[ 'object' ]}." )
+
+            if DEBUG:
+                print( e )
+                
+            print( f"You can't do that to the {command[ 'object' ]}." )
                   
                   
         if DEBUG > 0:
